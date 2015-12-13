@@ -10,7 +10,10 @@ import org.apache.commons.codec.digest.DigestUtils;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A servlet to handle all the requests on a list of users
@@ -18,18 +21,75 @@ import java.util.List;
  */
 public class UsersServlet extends JsonServlet {
 
+    public static final Logger LOG = Logger.getLogger(UsersServlet.class.getSimpleName());
+
     // A GET request should return a list of users
     @Override
     protected List<User> doGet(HttpServletRequest req) throws ServletException, IOException, ApiException {
         // TODO: define parameters to search/filter users by login, with limit, order...
         // TODO: define parameters to get the followings and the followers of a user given its id
-        return UsersRepository.getUsers();
+
+        int idUser;
+        //req.getParameter("followedBy")
+        //req.getParameter("followerOf")
+        //attention Le premier paramètre traité doit être followedBy ou followerOf
+        String para = req.getParameterNames().nextElement().toString();
+        idUser = Integer.parseInt(req.getParameter(para));
+        User user = UsersRepository.getUser(idUser);
+
+        int limit = Integer.parseInt(req.getParameter("limit"));
+        String continuationToken = "";
+
+        if (!req.getParameter("continuationToken").isEmpty()) {
+            user.avatar = "continuationToken retrieve";
+            continuationToken = req.getParameter("continuationToken");
+        }
+
+        if (para.contains("followedBy")) {
+            if (continuationToken == "") {
+                //renvoie d'un token en para pour la prochaine pagination
+                continuationToken = TokenUtils.generateToken(idUser);
+                return UsersRepository.getUserFollowed(user.id, limit).users;
+            } else {
+
+                //renvoie la suite de la liste d'utilisateur suivi
+                List<User> users = UsersRepository.getUserFollowed(continuationToken, limit).users;
+                //génération d'un nouveau ContinuationToken a renvoyer avec la réponse
+                continuationToken = TokenUtils.generateToken(idUser);
+                // envoyer ce nouveau token avec les users...
+                return users;
+            }
+        } else if (para.contains("followerOf")) {
+            if (continuationToken == "") {
+                //renvoie d'un token en para pour la prochaine pagination
+                continuationToken = TokenUtils.generateToken(idUser);
+
+                return UsersRepository.getUserFollowers(user.id, limit).users;
+            } else {
+
+                //renvoie la suite de la liste d'utilisateur suivi
+                List<User> users = UsersRepository.getUserFollowers(continuationToken, limit).users;
+                continuationToken = TokenUtils.generateToken(idUser);
+                return users;
+            }
+        } else {
+
+            // renvoie tous les utilisateurs par défaut
+            List<User> test = new ArrayList<>();
+            user.email = para;
+            user.password = "Merde";
+            test.add(user);
+            return test;
+        }
     }
+
 
     // A POST request can be used to create a user
     // We can use it as a "register" endpoint; in this case we return a token to the client.
     @Override
     protected String doPost(HttpServletRequest req) throws ServletException, IOException, ApiException {
+
+        LOG.info("User Servlet");
 
         // The request should be a JSON object describing a new user
         User user = getJsonRequestBody(req, User.class);

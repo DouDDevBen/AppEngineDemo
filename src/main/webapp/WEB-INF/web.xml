@@ -38,6 +38,31 @@
         Generic mappings (with "/*") must go before their exact-matching counterpart.
     -->
 
+    <!-- Servlet pour les utilisateurs suivis
+    <servlet>
+        <servlet-name>usersFollowed</servlet-name>
+        <servlet-class>fr.ecp.sio.appenginedemo.api.UsersServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>usersFollowed</servlet-name>
+        <url-pattern>/users?followedBy=*</url-pattern>
+    </servlet-mapping>
+    -->
+
+    <!-- Servlet pour les utilisateurs nous suivant
+    <servlet>
+        <servlet-name>usersFollowers</servlet-name>
+        <servlet-class>fr.ecp.sio.appenginedemo.api.UsersServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>usersFollowers</servlet-name>
+        <url-pattern>/users?followerOf=*</url-pattern>
+    </servlet-mapping>
+    -->
+
+
+
+
     <servlet>
         <servlet-name>user</servlet-name>
         <servlet-class>fr.ecp.sio.appenginedemo.api.UserServlet</servlet-class>

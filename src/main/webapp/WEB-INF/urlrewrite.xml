@@ -19,4 +19,13 @@
         <to>/users?followerOf=$1</to>
     </rule>
 
-</urlrewrite>
+
+            <!-- URLs like /users/78264 will be processed as /user?id=78264 -->
+            <!-- <from>/users/(\w+)/account</from>
+             <to>/user?id=$1</to>
+         </rule>-->
+
+
+
+
+     </urlrewrite>

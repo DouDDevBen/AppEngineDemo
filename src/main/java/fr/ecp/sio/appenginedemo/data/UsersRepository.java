@@ -86,7 +86,7 @@ public class UsersRepository {
         return getUsers();
     }
 
-    public static UsersList getUserFollowers(long id) {
+    public static UsersList getUserFollowers(long id, int limit) {
         return getUsers();
     }
 
