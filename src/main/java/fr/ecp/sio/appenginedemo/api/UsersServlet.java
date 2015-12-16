@@ -7,6 +7,7 @@ import fr.ecp.sio.appenginedemo.utils.TokenUtils;
 import fr.ecp.sio.appenginedemo.utils.ValidationUtils;
 import org.apache.commons.codec.digest.DigestUtils;
 
+
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
@@ -29,29 +30,46 @@ public class UsersServlet extends JsonServlet {
         // TODO: define parameters to search/filter users by login, with limit, order...
         // TODO: define parameters to get the followings and the followers of a user given its id
 
-        int idUser;
-        //req.getParameter("followedBy")
-        //req.getParameter("followerOf")
-        //attention Le premier paramètre traité doit être followedBy ou followerOf
-        String para = req.getParameterNames().nextElement().toString();
-        idUser = Integer.parseInt(req.getParameter(para));
-        User user = UsersRepository.getUser(idUser);
-
-        int limit = Integer.parseInt(req.getParameter("limit"));
+        long idUser = 0;
         String continuationToken = "";
+        int limit = 5;
+        String typeOfListUser = "";
 
-        if (!req.getParameter("continuationToken").isEmpty()) {
-            user.avatar = "continuationToken retrieve";
-            continuationToken = req.getParameter("continuationToken");
+        //Un paramètre followedBy ou followerOf est nécessaire pour retourner une liste non vide
+
+        if (req.getParameter(ValidationUtils.PARAMETER_FOLLOWEDBY) != null) {
+            idUser = Integer.parseInt(req.getParameter(ValidationUtils.PARAMETER_FOLLOWEDBY));
+        } else if ( req.getParameter(ValidationUtils.PARAMETER_FOLLOWEROF) != null ) {
+            idUser = Integer.parseInt(req.getParameter(ValidationUtils.PARAMETER_FOLLOWEROF));
+        } else {
+            // La servlet ne traite pas les requettes sans paramètres followedBy ou followerOf
+            return null;
         }
 
-        if (para.contains("followedBy")) {
+        // récupération du User suivi
+        User user = UsersRepository.getUser(idUser);
+
+        // Check du parametre limit
+        // si le champs limit est oublié ( limite par defaut à 5 )
+        if (req.getParameter(ValidationUtils.PARAMETER_LIMIT) != null) {
+            limit = Integer.parseInt(req.getParameter(ValidationUtils.PARAMETER_LIMIT));
+        }
+
+        // check du parametre continuation Token
+        // si il est vide et n'est pas renseigné , on retournera le début de la liste voulue
+        if (req.getParameter(ValidationUtils.PARAMETER_CONTINUATION_TOKEN) != null) {
+            user.avatar = "continuationToken retrieve";
+            continuationToken = req.getParameter(ValidationUtils.PARAMETER_CONTINUATION_TOKEN);
+        }
+
+        // J'ai essayé de factorisé le code mais je ni suis pas arrivé dans la logique que j'ai adoptée.
+        // (Les Conditions se doivent d'être imbriquées)
+        if (req.getParameter(ValidationUtils.PARAMETER_FOLLOWEDBY) != null) {
             if (continuationToken == "") {
-                //renvoie d'un token en para pour la prochaine pagination
+                //renvoi d'un token avec la réponse pour la prochaine pagination
                 continuationToken = TokenUtils.generateToken(idUser);
                 return UsersRepository.getUserFollowed(user.id, limit).users;
             } else {
-
                 //renvoie la suite de la liste d'utilisateur suivi
                 List<User> users = UsersRepository.getUserFollowed(continuationToken, limit).users;
                 //génération d'un nouveau ContinuationToken a renvoyer avec la réponse
@@ -59,30 +77,28 @@ public class UsersServlet extends JsonServlet {
                 // envoyer ce nouveau token avec les users...
                 return users;
             }
-        } else if (para.contains("followerOf")) {
+        } else if (req.getParameter(ValidationUtils.PARAMETER_FOLLOWEROF) != null) {
             if (continuationToken == "") {
-                //renvoie d'un token en para pour la prochaine pagination
+                //renvoie d'un token en typeOfListUser pour la prochaine pagination
                 continuationToken = TokenUtils.generateToken(idUser);
-
                 return UsersRepository.getUserFollowers(user.id, limit).users;
             } else {
-
                 //renvoie la suite de la liste d'utilisateur suivi
                 List<User> users = UsersRepository.getUserFollowers(continuationToken, limit).users;
                 continuationToken = TokenUtils.generateToken(idUser);
+                // envoyer ce nouveau token avec les users...
                 return users;
             }
-        } else {
-
-            // renvoie tous les utilisateurs par défaut
-            List<User> test = new ArrayList<>();
-            user.email = para;
-            user.password = "Merde";
-            test.add(user);
-            return test;
         }
-    }
 
+        // renvoie tous les utilisateurs par défaut
+        List<User> test = new ArrayList<>();
+        user.email = req.getParameter(ValidationUtils.PARAMETER_FOLLOWEROF);
+        user.avatar = req.getParameter(ValidationUtils.PARAMETER_FOLLOWEDBY);
+        user.password = req.getParameter(ValidationUtils.PARAMETER_CONTINUATION_TOKEN);
+        test.add(user);
+        return test;
+    }
 
     // A POST request can be used to create a user
     // We can use it as a "register" endpoint; in this case we return a token to the client.

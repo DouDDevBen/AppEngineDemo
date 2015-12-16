@@ -60,9 +60,6 @@
     </servlet-mapping>
     -->
 
-
-
-
     <servlet>
         <servlet-name>user</servlet-name>
         <servlet-class>fr.ecp.sio.appenginedemo.api.UserServlet</servlet-class>
@@ -108,5 +105,16 @@
         <servlet-name>token</servlet-name>
         <url-pattern>auth/token</url-pattern>
     </servlet-mapping>
+
+    <servlet>
+        <servlet-name>googleStorage</servlet-name>
+        <servlet-class>fr.ecp.sio.appenginedemo.api.BlobServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>googleStorage</servlet-name>
+        <url-pattern>www.googleapis.com/*</url-pattern>
+    </servlet-mapping>
+
+
 
 </web-app>
