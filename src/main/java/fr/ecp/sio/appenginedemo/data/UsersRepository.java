@@ -62,6 +62,7 @@ public class UsersRepository {
         return new ObjectifyFactory().allocateId(User.class).getId();
     }
 
+
     public static void saveUser(User user) {
         user.id = ObjectifyService.ofy()
                 .save()

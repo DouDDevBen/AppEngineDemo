@@ -13,7 +13,6 @@ public class ValidationUtils {
     private static final String PASSWORD_PATTERN = "^\\w{4,12}$";
     private static final String ID_ME = "me";
     private static final String ID_STRING = "^[0-9]{1,8}$";
-
     public static final String PARAMETER_FOLLOWEDBY = "followedBy";
     public static final String PARAMETER_FOLLOWEROF = "followerOf";
     public static final String PARAMETER_LIMIT = "limit";

@@ -59,6 +59,14 @@
         <url-pattern>/users?followerOf=*</url-pattern>
     </servlet-mapping>
     -->
+    <servlet>
+        <servlet-name>upload</servlet-name>
+        <servlet-class>fr.ecp.sio.appenginedemo.api.BlobServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>upload</servlet-name>
+        <url-pattern>upload</url-pattern>
+    </servlet-mapping>
 
     <servlet>
         <servlet-name>user</servlet-name>
@@ -106,14 +114,6 @@
         <url-pattern>auth/token</url-pattern>
     </servlet-mapping>
 
-    <servlet>
-        <servlet-name>googleStorage</servlet-name>
-        <servlet-class>fr.ecp.sio.appenginedemo.api.BlobServlet</servlet-class>
-    </servlet>
-    <servlet-mapping>
-        <servlet-name>googleStorage</servlet-name>
-        <url-pattern>www.googleapis.com/*</url-pattern>
-    </servlet-mapping>
 
 
 

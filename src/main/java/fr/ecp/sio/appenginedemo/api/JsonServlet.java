@@ -59,8 +59,9 @@ public class JsonServlet extends HttpServlet {
     @Override
     protected final void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         try {
-            Object response = doPost(req);
-            sendResponse(response,resp);
+            Object response = null;
+            response = doPost(req);
+            sendResponse(response, resp);
         } catch (ApiException e) {
             resp.setStatus(e.getError().status);
             sendResponse(e.getError(), resp);
@@ -69,6 +70,11 @@ public class JsonServlet extends HttpServlet {
 
     // Our custom doPost(), to be optionally overwritten by sub-servlets.
     protected Object doPost(HttpServletRequest req) throws ServletException, IOException, ApiException {
+        return null;
+    }
+
+    // Our custom doAvatarPost(), to be optionally overwritten by sub-servlets.
+    protected Object doAvatarPost(HttpServletRequest req ,HttpServletResponse response) throws ServletException, IOException, ApiException {
         return null;
     }
 
@@ -88,6 +94,12 @@ public class JsonServlet extends HttpServlet {
     protected Object doDelete(HttpServletRequest req) throws ServletException, IOException, ApiException {
         return null;
     }
+
+    //private void sendAvatarResponse(Object response, HttpServletResponse resp) throws IOException {
+    //    resp.setContentType("image");
+
+    //}
+
 
     // Private common place for writing a response Object as JSON into the response stream
     private void sendResponse(Object response, HttpServletResponse resp) throws IOException {
