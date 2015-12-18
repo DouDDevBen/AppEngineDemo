@@ -19,9 +19,13 @@ import fr.ecp.sio.appenginedemo.data.UsersRepository;
  */
 public class BlobServlet extends JsonServlet {
 
+
+    // POST
+    // Method called when a User post a file on the URL return by the GET method (using a redirection )
+    // Key of uploadFile is saved in User Repository.
+    // Return the User
     @Override
     protected User doPost(HttpServletRequest req) throws ServletException, IOException, ApiException {
-
 
         BlobstoreService blobstoreService = BlobstoreServiceFactory.getBlobstoreService();
         ImagesService imagesService = ImagesServiceFactory.getImagesService();

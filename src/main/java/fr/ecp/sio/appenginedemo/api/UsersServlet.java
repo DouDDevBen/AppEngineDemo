@@ -11,6 +11,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.sql.Struct;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,15 +27,15 @@ public class UsersServlet extends JsonServlet {
 
     // A GET request should return a list of users
     @Override
-    protected List<User> doGet(HttpServletRequest req) throws ServletException, IOException, ApiException {
+    protected Object doGet(HttpServletRequest req) throws ServletException, IOException, ApiException {
         // TODO: define parameters to search/filter users by login, with limit, order...
         // TODO: define parameters to get the followings and the followers of a user given its id
-
+        // Init default values
         long idUser = 0;
         String continuationToken = "";
         int limit = 5;
 
-        // Constant String are for the most defining in ValidationUtils
+        // Constant String are for the most defined in ValidationUtils
         if (req.getParameter(ValidationUtils.PARAMETER_FOLLOWEDBY) != null) {
             idUser = Integer.parseInt(req.getParameter(ValidationUtils.PARAMETER_FOLLOWEDBY));
         } else if ( req.getParameter(ValidationUtils.PARAMETER_FOLLOWEROF) != null ) {
@@ -54,8 +55,7 @@ public class UsersServlet extends JsonServlet {
         }
 
         // check continuation Token
-        // If empty, we will return the top list.
-        // si il est vide et n'est pas renseigné , on retournera le début de la liste voulue
+        // If empty, we will return the top list (followers or followed users)
         if (req.getParameter(ValidationUtils.PARAMETER_CONTINUATION_TOKEN) != null) {
             continuationToken = req.getParameter(ValidationUtils.PARAMETER_CONTINUATION_TOKEN);
         }
@@ -75,30 +75,37 @@ public class UsersServlet extends JsonServlet {
     // PARA token : continuation token ( cursor on the list)
     // PARA user : user auth
     // PARA limit : limitation of users members returned
-    // RETURN : List of Users
-    protected List<User> handleRequiereList(String type, String token, User user, int limit ) {
-        List<User> users = null;
+    // RETURN : List of (Cursor + List of Users)
+    protected Object handleRequiereList(String type, String token, User user, int limit ) {
 
-        if (token == "") {   //renvoie d'un token en typeOfListUser pour la prochaine pagination
+        List<Object> maList = new ArrayList<Object>();
+        List<User> usersList;
+
+        if (token == "") {
 
             token = TokenUtils.generateToken(user.id);
             if (type == ValidationUtils.PARAMETER_FOLLOWEDBY ) {
-                return UsersRepository.getUserFollowers(user.id, limit).users;
+                usersList = UsersRepository.getUserFollowers(user.id, limit).users;
             } else {
-                return UsersRepository.getUserFollowed(user.id, limit).users;
+                usersList =  UsersRepository.getUserFollowed(user.id, limit).users;
             }
 
-        } else {      //renvoie la suite de la liste d'utilisateur suivi
+        } else {
 
             if (type == ValidationUtils.PARAMETER_FOLLOWEROF ) {
-                users = UsersRepository.getUserFollowers(token, limit).users;
+                usersList =  UsersRepository.getUserFollowers(token, limit).users;
             } else {
-                users = UsersRepository.getUserFollowed(token, limit).users;
+                usersList =  UsersRepository.getUserFollowed(token, limit).users;
             }
+            // Generate a new token
             token = TokenUtils.generateToken(user.id);
-            // envoyer ce nouveau token avec les users...
-            return users;
         }
+
+        // Return a list working with the first element : Cursor token for further GET
+        // and a second element with the whole UserList found.
+        maList.add(token);
+        maList.add(usersList);
+        return maList;
     }
 
 
@@ -106,8 +113,6 @@ public class UsersServlet extends JsonServlet {
     // We can use it as a "register" endpoint; in this case we return a token to the client.
     @Override
     protected String doPost(HttpServletRequest req) throws ServletException, IOException, ApiException {
-
-        LOG.info("User Servlet");
 
         // The request should be a JSON object describing a new user
         User user = getJsonRequestBody(req, User.class);
@@ -137,6 +142,8 @@ public class UsersServlet extends JsonServlet {
         user.id = UsersRepository.allocateNewId();
 
         // TODO: find a solution to receive an store profile pictures
+        // The avatar cannot be upload when the account is created
+        // It will be managed by the BlobServlet ( in 2 phases)
         // Simulate an avatar image using Gravatar API
         user.avatar = "http://www.gravatar.com/avatar/" + MD5Utils.md5Hex(user.email) + "?d=wavatar";
 

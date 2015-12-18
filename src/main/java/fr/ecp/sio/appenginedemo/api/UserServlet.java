@@ -3,7 +3,9 @@ package fr.ecp.sio.appenginedemo.api;
 
 
 import com.google.appengine.api.images.Image;
+import fr.ecp.sio.appenginedemo.data.MessagesRepository;
 import fr.ecp.sio.appenginedemo.data.UsersRepository;
+import fr.ecp.sio.appenginedemo.model.Message;
 import fr.ecp.sio.appenginedemo.model.User;
 import fr.ecp.sio.appenginedemo.utils.ValidationUtils;
 
@@ -18,7 +20,7 @@ import java.util.logging.Logger;
 
 import com.google.appengine.api.blobstore.*;
 import com.google.appengine.api.blobstore.BlobKey;
-
+import org.apache.commons.codec.digest.DigestUtils;
 
 
 /**
@@ -32,35 +34,11 @@ public class UserServlet extends JsonServlet {
     // A GET request should simply return the user
     @Override
     protected User doGet(HttpServletRequest req) throws ServletException, IOException, ApiException {
-        LOG.info("User Servlet");
-        User user = findUserOfRequest(req);
 
-            return user;
-    }
-
-    /*@Override
-    protected doAvatarPost(HttpServletRequest req, HttpServletResponse response)
-            throws ServletException, IOException, ApiException  {
-
-        HttpServletResponse res = response;
-
-        BlobstoreService blobstoreService = BlobstoreServiceFactory.getBlobstoreService();
-
-        Map<String, List<BlobKey>> blobs = blobstoreService.getUploads(req);
-        List<BlobKey> blobKeys = blobs.get("myFile");
-
-        if (blobKeys == null || blobKeys.isEmpty()) {
-            res.sendRedirect("/");
-        } else {
-            res.sendRedirect("/serve?blob-key=" + blobKeys.get(0).getKeyString());
-        }
-
-        blobstoreService.createUploadUrl("/upload");
-
-        res.sendRedirect("/serve?blob-key=" + blobKeys.get(0).getKeyString());
+        return findUserOfRequest(req);
 
     }
-    */
+
 
     // A POST request could be used by a user to edit its own account
     // It could also handle relationship parameters like "followed=true"
@@ -73,73 +51,92 @@ public class UserServlet extends JsonServlet {
         // TODO: Return the modified user
 
         User userAuth = getAuthenticatedUser(req); // token needed to be authentificated
+        if (userAuth == null) {
+            return null;
+        }
 
-        // retrieve the user to follow ( users/id )
-        String path = req.getPathInfo();
-        String[] parts = path.split("/");
-        long urlId =  Long.parseLong(parts[1]);
+        // Manage a follow action ( or not follow)------------------------------
+        if(req.getParameter(ValidationUtils.PARAMETER_FOLLOWED) != null ){
 
-        if(req.getParameter("followed") != null ){
-        //if(req.getParameterNames().nextElement().toString() == "followed") {
+            // retrieve the user set in the url ( users/id )
+            String path = req.getPathInfo();
+            String[] parts = path.split("/");
+            long urlId =  Long.parseLong(parts[1]);
+
             // parse the bool (true or false)
             boolean parameter = Boolean.parseBoolean(req.getParameter("followed"));
+            // Update relationship between both users
             // 1er id : follower / 2eme id : followed
             UsersRepository.setUserFollowed(userAuth.id, urlId, parameter);
         }
 
-        /*if(req.getParameter("newAvatar") != null ){
+        // Manage password update -----------------------------------------------
+        if(req.getParameter(ValidationUtils.PARAMETER_UPDATE_PWD) != null) {
+            //Update passWord
+            String password = req.getParameter(ValidationUtils.PARAMETER_UPDATE_PWD);
 
-            BlobstoreService blobstoreService = BlobstoreServiceFactory.getBlobstoreService();
+            if (!ValidationUtils.validatePassword(password)) {
+                throw new ApiException(400, "invalidPassword", "Password did not match the specs");
+            }
+            userAuth.password = DigestUtils.sha256Hex(password + userAuth.id);
+        }
 
-            Map<String, List<BlobKey>> blobs = blobstoreService.getUploads(req);
-            List<BlobKey> blobKeys = blobs.get("myFile");
+        // Manage email update --------------------------------------------------
+        if(req.getParameter(ValidationUtils.PARAMETER_UPDATE_EMAIL) != null) {
 
-            if (blobKeys == null || blobKeys.isEmpty()) {
-                res.sendRedirect("/");
-            } else {
-                res.sendRedirect("/serve?blob-key=" + blobKeys.get(0).getKeyString());
+            //Update email if User is authentificated
+            String mail = req.getParameter(ValidationUtils.PARAMETER_UPDATE_EMAIL);
+
+            if (!ValidationUtils.validateEmail(mail)) {
+                throw new ApiException(400, "invalidEmail", "Invalid email");
+            }
+            if (UsersRepository.getUserByEmail(mail) != null) {
+                throw new ApiException(400, "duplicateEmail", "Duplicate email");
             }
 
-            String urlImage =
+            userAuth.email = mail;
         }
-        */
 
-
+        UsersRepository.saveUser(userAuth);
         return userAuth;
     }
 
     // A user can DELETE its own account
+    // Check the Auth user
+    // Deleted all his messages
+    // Deleted user in repository
+    // Return the user information to confirm.
     @Override
     protected User doDelete(HttpServletRequest req) throws ServletException, IOException, ApiException {
         // TODO: Security checks
         // TODO: Delete the user, the messages, the relationships
         // A DELETE request shall not have a response body
-        User user = findUserOfRequest(req);
+        User authUser = findUserOfRequest(req);
+        //To be sure that the user return is Auth
+        if (!authUser.password.isEmpty()) {
 
-        if (!user.password.isEmpty() && !user.email.isEmpty()) {
-            UsersRepository.deleteUser(user.id);
-
-            user.email = "";
-            user.password = "";
-            user.avatar = "";
-            user.coverPicture = "";
+            // For instance we can just iterate on a whole Repository Message list
+            // to delete all messages of the user.
+            // We could create a list of Reference of all Messages in the User
+            // model to simplify the edition
+            List<Message> messages = MessagesRepository.getMessages();
+            for (Message message : messages) {
+            User matchedUser = message.user.get();
+                if (matchedUser.id == authUser.id) {
+                    MessagesRepository.deleteMessage(authUser.id);
+                }
+            }
+            // user deleted once all messages have been deleted.
+            UsersRepository.deleteUser(authUser.id);
         }
-
-        return user;
-
-        /*GoogleCredential credential = new GoogleCredential().setAccessToken(accessToken);
-        Plus plus = new Plus.builder(new NetHttpTransport(), JacksonFactory.getDefaultInstance(), credential)
-                .setApplicationName("Google-PlusSample/1.0")
-                .build();
-        */
+        return authUser;
 
     }
 
-
     // Identification method of a user //
-    // Return the full user if Authentification is validated and match with the id on the url (users/id/...)
-    // Else return the user with hide personal information
-    // if id is substituated by "me", the user returned is the Auth User
+    // Return the full user if Authentification is validated AND matched with the id on the url (users/id/...)
+    // If id of the url is substituated by "me", Authentification succed : Returr also Auth User
+    // For all other configuration : RETURN the user with hide personal information
     private static User findUserOfRequest(HttpServletRequest req) throws ApiException {
 
         // TODO: Extract the id of the user from the last part of the path of the request
@@ -158,9 +155,8 @@ public class UserServlet extends JsonServlet {
                 user.password = "";
                 return user;
             }
-            // if parsing error
+            // Id not found
             return null;
-
         } else {
         // if authentification succeed
             // if id ="me" => return the auth user
@@ -172,7 +168,7 @@ public class UserServlet extends JsonServlet {
                 long id = Long.parseLong(parts[1]);
                 // user wants edit its own account if the id of the url and id of the authentificated user is the same.
                 if (UsersRepository.getUser(id).id == user.id) {
-                    return getAuthenticatedUser(req);
+                    return user;
                 }
                 // return the user of the id specified with hide private info
                 user = UsersRepository.getUser(id);
@@ -184,5 +180,20 @@ public class UserServlet extends JsonServlet {
         return null;
     }
 }
-    //String para = req.getParameterNames().nextElement().toString();
-    //idUser = Integer.parseInt(req.getParameter(para));
+
+/*if(req.getParameter("newAvatar") != null ){
+
+            BlobstoreService blobstoreService = BlobstoreServiceFactory.getBlobstoreService();
+
+            Map<String, List<BlobKey>> blobs = blobstoreService.getUploads(req);
+            List<BlobKey> blobKeys = blobs.get("myFile");
+
+            if (blobKeys == null || blobKeys.isEmpty()) {
+                res.sendRedirect("/");
+            } else {
+                res.sendRedirect("/serve?blob-key=" + blobKeys.get(0).getKeyString());
+            }
+
+            String urlImage =
+        }
+        */

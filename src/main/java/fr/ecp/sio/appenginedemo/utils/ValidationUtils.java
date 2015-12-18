@@ -12,11 +12,14 @@ public class ValidationUtils {
     private static final String LOGIN_PATTERN = "^[A-Za-z0-9_-]{4,12}$";
     private static final String PASSWORD_PATTERN = "^\\w{4,12}$";
     private static final String ID_ME = "me";
-    private static final String ID_STRING = "^[0-9]{1,8}$";
+    private static final String ID_PATTERN = "^[0-9]{1,8}$";
     public static final String PARAMETER_FOLLOWEDBY = "followedBy";
     public static final String PARAMETER_FOLLOWEROF = "followerOf";
     public static final String PARAMETER_LIMIT = "limit";
     public static final String PARAMETER_CONTINUATION_TOKEN = "continuationToken";
+    public static final String PARAMETER_FOLLOWED = "followed";
+    public static final String PARAMETER_UPDATE_PWD = "updatePwd";
+    public static final String PARAMETER_UPDATE_EMAIL = "updateEmail";
 
     public static boolean validateLogin(String login) {
         return login != null && login.matches(LOGIN_PATTERN);
@@ -32,7 +35,7 @@ public class ValidationUtils {
     }
 
     public static boolean validateIdString(String idString) {
-        return idString != null && idString.matches(ID_STRING);
+        return idString != null && idString.matches(ID_PATTERN);
     }
 
     public static boolean validateIdMe(String idMe) {
