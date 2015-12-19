@@ -83,6 +83,11 @@ public class UsersRepository {
         return getUsers();
     }
 
+    public static boolean isUserFollowUser(long authUserId, long OtherUserId) {
+        // For instance , we assume all users follow each other.
+        return true;
+    }
+
     public static UsersList getUserFollowed(String cursor, int limit) {
         return getUsers();
     }

@@ -2,11 +2,15 @@ package fr.ecp.sio.appenginedemo.api;
 
 import com.googlecode.objectify.Ref;
 import fr.ecp.sio.appenginedemo.data.MessagesRepository;
+import fr.ecp.sio.appenginedemo.data.UsersRepository;
 import fr.ecp.sio.appenginedemo.model.Message;
+import fr.ecp.sio.appenginedemo.model.User;
+import fr.ecp.sio.appenginedemo.utils.ValidationUtils;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -22,12 +26,33 @@ public class MessagesServlet extends JsonServlet {
         // TODO: filter the messages that the user can see (security!)
         // TODO: filter the list based on some parameters (order, limit, scope...)
         // TODO: e.g. add a parameter to get the messages of a user given its id (i.e. /messages?author=256439)
-        return MessagesRepository.getMessages();
+
+        User userAuth = getAuthenticatedUser(req);
+        if (userAuth == null) {
+            throw new ApiException(500, "accessDenied", "authorization required");
+        }
+
+        String urlId = req.getParameter("author");
+
+        if (ValidationUtils.validateIdString(urlId) &&
+                UsersRepository.isUserFollowUser(userAuth.id, Long.parseLong(urlId))){
+            return MessagesRepository.getMessagesForId(Long.parseLong(urlId));
+        }
+
+        // By default, if no author parameter, we return all messages of all Users followed.
+        List<User> userList = UsersRepository.getUserFollowed(userAuth.id, 100).users;
+        List<Message> messageList = new ArrayList<> ();
+        for (User user : userList) {
+            messageList.addAll(MessagesRepository.getMessagesForId(user.id));
+        }
+        return messageList;
     }
 
     // A POST request on a collection endpoint should create an entry and return it
     @Override
     protected Message doPost(HttpServletRequest req) throws ServletException, IOException, ApiException {
+
+        User userAuth = getAuthenticatedUser(req);
 
         // The request should be a JSON object describing a new message
         Message message = getJsonRequestBody(req, Message.class);
@@ -36,6 +61,9 @@ public class MessagesServlet extends JsonServlet {
         }
 
         // TODO: validate the message here (minimum length, etc.)
+        if (!ValidationUtils.validateMessage(message.text)) {
+            throw new ApiException(400, "invalidMessage", "Text too long or not found");
+        }
 
         // Some values of the Message should not be sent from the client app
         // Instead, we give them here explicit value

@@ -80,18 +80,14 @@ public class UsersServlet extends JsonServlet {
 
         List<Object> maList = new ArrayList<Object>();
         List<User> usersList;
-
         if (token == "") {
-
             token = TokenUtils.generateToken(user.id);
             if (type == ValidationUtils.PARAMETER_FOLLOWEDBY ) {
                 usersList = UsersRepository.getUserFollowers(user.id, limit).users;
             } else {
                 usersList =  UsersRepository.getUserFollowed(user.id, limit).users;
             }
-
         } else {
-
             if (type == ValidationUtils.PARAMETER_FOLLOWEROF ) {
                 usersList =  UsersRepository.getUserFollowers(token, limit).users;
             } else {
@@ -100,7 +96,6 @@ public class UsersServlet extends JsonServlet {
             // Generate a new token
             token = TokenUtils.generateToken(user.id);
         }
-
         // Return a list working with the first element : Cursor token for further GET
         // and a second element with the whole UserList found.
         maList.add(token);

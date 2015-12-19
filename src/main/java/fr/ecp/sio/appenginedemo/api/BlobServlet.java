@@ -48,14 +48,11 @@ public class BlobServlet extends JsonServlet {
 
         // Récupère la clé identifiant du fichier uploadé dans le Blobstore (à sauvegarder)
         String cleFichierUploade = blobKeys.get(0).getKeyString();
-
         String urlImage = imagesService.getServingUrl(ServingUrlOptions.Builder.withBlobKey(blobKeys.get(0)));
-
         user.avatar = urlImage;
         user.avatarKey = cleFichierUploade;
         // On enregistre la clé de l'avatar avec le User correspondant
         UsersRepository.saveUser(user);
-
         return user;
     }
 
@@ -69,8 +66,8 @@ public class BlobServlet extends JsonServlet {
         User user = getAuthenticatedUser(req);
 
         BlobstoreService blobstoreService = BlobstoreServiceFactory.getBlobstoreService();
-        String Url  = blobstoreService.createUploadUrl("/upload");
-        user.avatar = Url;
+        String url  = blobstoreService.createUploadUrl("/upload");
+        user.avatar = url;
 
         return user;
 

@@ -3,6 +3,7 @@ package fr.ecp.sio.appenginedemo.data;
 import com.googlecode.objectify.ObjectifyService;
 import fr.ecp.sio.appenginedemo.model.Message;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -28,6 +29,19 @@ public class MessagesRepository {
                 .now();
     }
 
+    public static List<Message> getMessagesForId(long userId) {
+        // returns multiple results as a list for a id User
+        List<Message> allMessages = getMessages();
+        List<Message> returnMessages = new ArrayList<> ();
+        for (Message m : allMessages) {
+            if(m.user.get().id == userId) {
+                returnMessages.add(m);
+            }
+        }
+        return returnMessages;
+    }
+
+
     public static List<Message> getMessages() {
         // Same as above, without id, returns multiple results as a list
         return ObjectifyService.ofy()
@@ -35,6 +49,9 @@ public class MessagesRepository {
                 .type(Message.class)
                 .list();
     }
+
+
+
 
     public static void insertMessage(Message message) {
         // Persisting an entity is just a save() query

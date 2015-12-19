@@ -1,7 +1,10 @@
 package fr.ecp.sio.appenginedemo.api;
 
 import fr.ecp.sio.appenginedemo.data.MessagesRepository;
+import fr.ecp.sio.appenginedemo.data.UsersRepository;
 import fr.ecp.sio.appenginedemo.model.Message;
+import fr.ecp.sio.appenginedemo.model.User;
+import fr.ecp.sio.appenginedemo.utils.ValidationUtils;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -17,31 +20,74 @@ public class MessageServlet extends JsonServlet {
     @Override
     protected Message doGet(HttpServletRequest req) throws ServletException, IOException, ApiException {
         // TODO: Extract the id of the message from the last part of the path of the request
+        User userAuth = getAuthenticatedUser(req);
+        if (userAuth == null ) throw new ApiException(500, "accessDenied", "authorization required");
+
         // TODO: Check if this id is syntactically correct
-        long id = 0;
+        long messageId = getIdMessageFromReq(req);
         // Lookup in repository
-        Message message = MessagesRepository.getMessage(id);
+        Message message = MessagesRepository.getMessage(messageId);
+        if (message != null && UsersRepository.isUserFollowUser(message.user.get().id, userAuth.id)) {
+            return message;
+        }
         // TODO: Not found?
-        return message;
+        throw new ApiException(500, "ErrorMessage", "Message not found or not allowed to see");
+
+
+    }
+
+    protected static long getIdMessageFromReq(HttpServletRequest req) throws ApiException {
+
+        String path = req.getPathInfo();
+        String[] parts = path.split("/");
+        if (ValidationUtils.validateIdString(parts[1])) {
+            return Long.parseLong(parts[1]);
+        } else {
+            return 0;
+        }
     }
 
     // A POST request could be made to modify some properties of a message after it is created
     @Override
     protected Message doPost(HttpServletRequest req) throws ServletException, IOException, ApiException {
+
+        User userAuth = getAuthenticatedUser(req);
+        if (userAuth == null) throw new ApiException(500, "accessDenied", "authorization required");
         // TODO: Get the message as below
-        // TODO: Apply the changes
-        // TODO: Return the modified message
+        long messageId = getIdMessageFromReq(req);
+        Message message = MessagesRepository.getMessage(messageId);
+
+        // DONE: verify if user is the author
+        if (userAuth.id != message.user.get().id) throw new ApiException(500, "accessDenied", "not allowed to midify this message");
+        Message newMessage = getJsonRequestBody(req, Message.class);
+
+        if (newMessage.text != null) {
+            // TODO: Apply the changes
+            message.text = newMessage.text;
+            MessagesRepository.insertMessage(message);
+            // TODO: Return the modified message
+            return message;
+        }
         return null;
     }
 
-    // A DELETE request should delete a message (if the user)
+    // A DELETE request should delete a message (if the user Auth is the same )
     @Override
     protected Void doDelete(HttpServletRequest req) throws ServletException, IOException, ApiException {
         // TODO: Get the message
         // TODO: Check that the calling user is the author of the message (security!)
         // TODO: Delete the message
         // A DELETE request shall not have a response body
+
+        User userAuth = getAuthenticatedUser(req);
+
+        if (userAuth == null) throw new ApiException(500, "accessDenied", "authorization required");
+        Message message = MessagesRepository.getMessage(getIdMessageFromReq(req));
+        if (userAuth.id != message.user.get().id) throw new ApiException(500, "accessDenied", "Message has a different owner");
+
+        MessagesRepository.deleteMessage(message.id);
         return null;
+
     }
 
 }

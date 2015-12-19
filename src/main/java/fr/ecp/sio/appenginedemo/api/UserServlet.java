@@ -35,6 +35,8 @@ public class UserServlet extends JsonServlet {
     @Override
     protected User doGet(HttpServletRequest req) throws ServletException, IOException, ApiException {
 
+        // return the user Auth if authentification match with url Id or "me" patern
+        // else return user of url Id with hide info (no password and email)
         return findUserOfRequest(req);
 
     }
@@ -51,9 +53,7 @@ public class UserServlet extends JsonServlet {
         // TODO: Return the modified user
 
         User userAuth = getAuthenticatedUser(req); // token needed to be authentificated
-        if (userAuth == null) {
-            return null;
-        }
+        if (userAuth == null) throw new ApiException(500, "accessDenied", "authorization required");
 
         // Manage a follow action ( or not follow)------------------------------
         if(req.getParameter(ValidationUtils.PARAMETER_FOLLOWED) != null ){
@@ -112,7 +112,7 @@ public class UserServlet extends JsonServlet {
         // TODO: Delete the user, the messages, the relationships
         // A DELETE request shall not have a response body
         User authUser = findUserOfRequest(req);
-        //To be sure that the user return is Auth
+        //To be sure that the user return is Auth and not the url-id
         if (!authUser.password.isEmpty()) {
 
             // For instance we can just iterate on a whole Repository Message list
