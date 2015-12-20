@@ -14,6 +14,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.security.SignatureException;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -74,11 +75,6 @@ public class JsonServlet extends HttpServlet {
         return null;
     }
 
-    // Our custom doAvatarPost(), to be optionally overwritten by sub-servlets.
-    protected Object doAvatarPost(HttpServletRequest req ,HttpServletResponse response) throws ServletException, IOException, ApiException {
-        return null;
-    }
-
     // Same behavior as for doGet(), we must take care of all the HTTP methods!
     @Override
     protected final void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -95,11 +91,6 @@ public class JsonServlet extends HttpServlet {
     protected Object doDelete(HttpServletRequest req) throws ServletException, IOException, ApiException {
         return null;
     }
-
-    //private void sendAvatarResponse(Object response, HttpServletResponse resp) throws IOException {
-    //    resp.setContentType("image");
-
-    //}
 
 
     // Private common place for writing a response Object as JSON into the response stream
@@ -157,6 +148,8 @@ public class JsonServlet extends HttpServlet {
         return GsonFactory.getGson().fromJson(req.getReader(), type);
     }
 
+    // Return the long Id found into the url after the first "/"
+    // return 0 if parsing failed.
     protected static long getIdUrl(HttpServletRequest req) throws ApiException {
 
         String path = req.getPathInfo();
@@ -180,15 +173,14 @@ public class JsonServlet extends HttpServlet {
         String path = req.getPathInfo();
         String[] parts = path.split("/");
 
-        User user = getAuthenticatedUser(req);
-        if (user == null) { // -----if NO authentification succeed-----------------
+        User userAuth = getAuthenticatedUser(req);
+        if (userAuth == null) { // -----if NO authentification succeed-----------------
             // return the user of the id specified with hide private info
             if (getIdUrl(req) != 0) {
                 long id = getIdUrl(req);
-                user = UsersRepository.getUser(id);
-                user.email = "";
-                user.password = "";
-                return user;
+                userAuth = UsersRepository.getUser(id);
+                if (userAuth == null) throw new ApiException(400, "User Id not found ", "Url Id not found");
+                return hideInfoForUser(userAuth);
             }
             // Id not found
             return null;
@@ -197,23 +189,30 @@ public class JsonServlet extends HttpServlet {
 
             // if id ="me" => return the auth user
             if (ValidationUtils.validateIdMe(parts[1])) {
-                return user;
+                return userAuth;
             }
             // check id and parse it
             if (ValidationUtils.validateIdString(parts[1])) {
                 long id = Long.parseLong(parts[1]);
                 // user wants edit its own account if the id of the url and id of the authentificated user is the same.
-                if (UsersRepository.getUser(id).id == user.id) {
-                    return user;
+                User urlUser = UsersRepository.getUser(id);
+                if (urlUser == null) throw new ApiException(400, "User Id not found ", "Url Id not found");
+                if (urlUser.id == userAuth.id) {
+                    return userAuth;
                 }
                 // return the user of the id specified with hide private info
-                user = UsersRepository.getUser(id);
-                user.email = "";
-                user.password = "";
-                return user;
+                return hideInfoForUser(userAuth);
             }
         }
         return null;
+    }
+
+
+    // Method to hide private info of a user
+    protected static User hideInfoForUser(User user) {
+        user.password = "";
+        user.email = "";
+        return user;
     }
 
 }

@@ -73,10 +73,8 @@ public class UsersServlet extends JsonServlet {
             if (user == null) throw new ApiException(400, "User Auth not found ", "User Auth not found");
             return handleRequiereList(followedBy, continuationToken, user, limit);
         }
-
         // By default
         return UsersRepository.getUsers().users;
-
     }
 
     // Method in charge of calling the appropriate list of Users

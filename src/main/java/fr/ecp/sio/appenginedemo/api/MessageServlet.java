@@ -24,7 +24,7 @@ public class MessageServlet extends JsonServlet {
         if (userAuth == null ) throw new ApiException(500, "accessDenied", "authorization required");
 
         // DONE: Check if this id is syntactically correct
-        long messageId = getIdMessageFromReq(req);
+        long messageId = getIdUrl(req);
         // Lookup in repository
         Message message = MessagesRepository.getMessage(messageId);
         if (message != null && UsersRepository.isUserFollowUser(message.user.get().id, userAuth.id)) {
@@ -38,16 +38,6 @@ public class MessageServlet extends JsonServlet {
 
     }
 
-    protected static long getIdMessageFromReq(HttpServletRequest req) throws ApiException {
-
-        String path = req.getPathInfo();
-        String[] parts = path.split("/");
-        if (ValidationUtils.validateIdString(parts[1])) {
-            return Long.parseLong(parts[1]);
-        } else {
-            return 0;
-        }
-    }
 
     // A POST request could be made to modify some properties of a message after it is created
     @Override
@@ -56,7 +46,7 @@ public class MessageServlet extends JsonServlet {
         User userAuth = getAuthenticatedUser(req);
         if (userAuth == null) throw new ApiException(500, "accessDenied", "authorization required");
         // DONE: Get the message as below
-        long messageId = getIdMessageFromReq(req);
+        long messageId = getIdUrl(req);
         Message message = MessagesRepository.getMessage(messageId);
 
         // DONE: verify if user is the author
@@ -84,7 +74,7 @@ public class MessageServlet extends JsonServlet {
         User userAuth = getAuthenticatedUser(req);
 
         if (userAuth == null) throw new ApiException(500, "accessDenied", "authorization required");
-        Message message = MessagesRepository.getMessage(getIdMessageFromReq(req));
+        Message message = MessagesRepository.getMessage(getIdUrl(req));
         if (userAuth.id != message.user.get().id) throw new ApiException(500, "accessDenied", "Message has a different owner");
 
         MessagesRepository.deleteMessage(message.id);
