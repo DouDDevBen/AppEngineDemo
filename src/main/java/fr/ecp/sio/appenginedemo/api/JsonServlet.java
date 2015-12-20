@@ -6,6 +6,7 @@ import fr.ecp.sio.appenginedemo.data.UsersRepository;
 import fr.ecp.sio.appenginedemo.gson.GsonFactory;
 import fr.ecp.sio.appenginedemo.model.User;
 import fr.ecp.sio.appenginedemo.utils.TokenUtils;
+import fr.ecp.sio.appenginedemo.utils.ValidationUtils;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -156,5 +157,63 @@ public class JsonServlet extends HttpServlet {
         return GsonFactory.getGson().fromJson(req.getReader(), type);
     }
 
+    protected static long getIdUrl(HttpServletRequest req) throws ApiException {
+
+        String path = req.getPathInfo();
+        String[] parts = path.split("/");
+        if (ValidationUtils.validateIdString(parts[1])) {
+            return Long.parseLong(parts[1]);
+        }
+        return 0;
+    }
+
+
+    // Identification method of a user /
+    // Return the full user if Authentification is validated AND matched with the id on the url (users/id/...)
+    // If id of the url is substituated by "me", Authentification succed : Return also Auth User
+    // For all other configuration : RETURN the user of the url with hide personal information
+    public static User findUserOfRequest(HttpServletRequest req) throws ApiException {
+
+        // DONE: Extract the id of the user from the last part of the path of the request
+        // DONE: Check if this id is syntactically correct
+        // DONE: Not found?
+        String path = req.getPathInfo();
+        String[] parts = path.split("/");
+
+        User user = getAuthenticatedUser(req);
+        if (user == null) { // -----if NO authentification succeed-----------------
+            // return the user of the id specified with hide private info
+            if (getIdUrl(req) != 0) {
+                long id = getIdUrl(req);
+                user = UsersRepository.getUser(id);
+                user.email = "";
+                user.password = "";
+                return user;
+            }
+            // Id not found
+            return null;
+
+        } else { // -----if authentification succeed-------------------------------
+
+            // if id ="me" => return the auth user
+            if (ValidationUtils.validateIdMe(parts[1])) {
+                return user;
+            }
+            // check id and parse it
+            if (ValidationUtils.validateIdString(parts[1])) {
+                long id = Long.parseLong(parts[1]);
+                // user wants edit its own account if the id of the url and id of the authentificated user is the same.
+                if (UsersRepository.getUser(id).id == user.id) {
+                    return user;
+                }
+                // return the user of the id specified with hide private info
+                user = UsersRepository.getUser(id);
+                user.email = "";
+                user.password = "";
+                return user;
+            }
+        }
+        return null;
+    }
 
 }

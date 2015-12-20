@@ -19,18 +19,20 @@ public class MessageServlet extends JsonServlet {
     // A GET request should simply return the message
     @Override
     protected Message doGet(HttpServletRequest req) throws ServletException, IOException, ApiException {
-        // TODO: Extract the id of the message from the last part of the path of the request
+        // DONE: Extract the id of the message from the last part of the path of the request
         User userAuth = getAuthenticatedUser(req);
         if (userAuth == null ) throw new ApiException(500, "accessDenied", "authorization required");
 
-        // TODO: Check if this id is syntactically correct
+        // DONE: Check if this id is syntactically correct
         long messageId = getIdMessageFromReq(req);
         // Lookup in repository
         Message message = MessagesRepository.getMessage(messageId);
         if (message != null && UsersRepository.isUserFollowUser(message.user.get().id, userAuth.id)) {
+            message.user.get().password = "";
+            message.user.get().email= "";
             return message;
         }
-        // TODO: Not found?
+        // DONE: Not found?
         throw new ApiException(500, "ErrorMessage", "Message not found or not allowed to see");
 
 
@@ -53,7 +55,7 @@ public class MessageServlet extends JsonServlet {
 
         User userAuth = getAuthenticatedUser(req);
         if (userAuth == null) throw new ApiException(500, "accessDenied", "authorization required");
-        // TODO: Get the message as below
+        // DONE: Get the message as below
         long messageId = getIdMessageFromReq(req);
         Message message = MessagesRepository.getMessage(messageId);
 
@@ -62,10 +64,10 @@ public class MessageServlet extends JsonServlet {
         Message newMessage = getJsonRequestBody(req, Message.class);
 
         if (newMessage.text != null) {
-            // TODO: Apply the changes
+            // DONE: Apply the changes
             message.text = newMessage.text;
             MessagesRepository.insertMessage(message);
-            // TODO: Return the modified message
+            // DONE: Return the modified message
             return message;
         }
         return null;
@@ -74,9 +76,9 @@ public class MessageServlet extends JsonServlet {
     // A DELETE request should delete a message (if the user Auth is the same )
     @Override
     protected Void doDelete(HttpServletRequest req) throws ServletException, IOException, ApiException {
-        // TODO: Get the message
-        // TODO: Check that the calling user is the author of the message (security!)
-        // TODO: Delete the message
+        // DONE: Get the message
+        // DONE: Check that the calling user is the author of the message (security!)
+        // DONE: Delete the message
         // A DELETE request shall not have a response body
 
         User userAuth = getAuthenticatedUser(req);

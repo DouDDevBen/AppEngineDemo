@@ -23,9 +23,9 @@ public class MessagesServlet extends JsonServlet {
     // A GET request should return a list of messages
     @Override
     protected List<Message> doGet(HttpServletRequest req) throws ServletException, IOException, ApiException {
-        // TODO: filter the messages that the user can see (security!)
-        // TODO: filter the list based on some parameters (order, limit, scope...)
-        // TODO: e.g. add a parameter to get the messages of a user given its id (i.e. /messages?author=256439)
+        // DONE: filter the messages that the user can see (security!)
+        // DOne: filter the list based on some parameters (order, limit, scope...)
+        // DOne: e.g. add a parameter to get the messages of a user given its id (i.e. /messages?author=256439)
 
         User userAuth = getAuthenticatedUser(req);
         if (userAuth == null) {
@@ -33,10 +33,11 @@ public class MessagesServlet extends JsonServlet {
         }
 
         String urlId = req.getParameter("author");
-
+        // return all messages if the user of urlID is followed by AuthUser.
         if (ValidationUtils.validateIdString(urlId) &&
                 UsersRepository.isUserFollowUser(userAuth.id, Long.parseLong(urlId))){
-            return MessagesRepository.getMessagesForId(Long.parseLong(urlId));
+            List<Message> messageList = MessagesRepository.getMessagesForId(Long.parseLong(urlId));
+            return hideInfoForListMessage(messageList);
         }
 
         // By default, if no author parameter, we return all messages of all Users followed.
@@ -45,7 +46,7 @@ public class MessagesServlet extends JsonServlet {
         for (User user : userList) {
             messageList.addAll(MessagesRepository.getMessagesForId(user.id));
         }
-        return messageList;
+        return hideInfoForListMessage(messageList);
     }
 
     // A POST request on a collection endpoint should create an entry and return it
@@ -60,7 +61,7 @@ public class MessagesServlet extends JsonServlet {
             throw new ApiException(400, "invalidRequest", "Invalid JSON body");
         }
 
-        // TODO: validate the message here (minimum length, etc.)
+        // DONE: validate the message here (minimum length, etc.)
         if (!ValidationUtils.validateMessage(message.text)) {
             throw new ApiException(400, "invalidMessage", "Text too long or not found");
         }
@@ -76,6 +77,14 @@ public class MessagesServlet extends JsonServlet {
         MessagesRepository.insertMessage(message);
 
         return message;
+    }
+
+    protected static List<Message> hideInfoForListMessage(List<Message> messageList) {
+        for (Message u : messageList) {
+            u.user.get().password = "";
+            u.user.get().email = "";
+        }
+        return messageList;
     }
 
 }

@@ -47,21 +47,21 @@ public class UserServlet extends JsonServlet {
     @Override
     protected User doPost(HttpServletRequest req) throws ServletException, IOException, ApiException {
 
-        // TODO: Get the user as below
-        // TODO: Apply some changes on the user (after checking for the connected user)
-        // TODO: Handle special parameters like "followed=true" to create or destroy relationships
-        // TODO: Return the modified user
+        // DONE: Get the user as below
+        // DONE: Apply some changes on the user (after checking for the connected user)
+        // DONE: Handle special parameters like "followed=true" to create or destroy relationships
+        // DONE: Return the modified user
 
-        User userAuth = getAuthenticatedUser(req); // token needed to be authentificated
+        User userAuth = getAuthenticatedUser(req);
         if (userAuth == null) throw new ApiException(500, "accessDenied", "authorization required");
 
         // Manage a follow action ( or not follow)------------------------------
         if(req.getParameter(ValidationUtils.PARAMETER_FOLLOWED) != null ){
 
             // retrieve the user set in the url ( users/id )
-            String path = req.getPathInfo();
-            String[] parts = path.split("/");
-            long urlId =  Long.parseLong(parts[1]);
+            // id = "me" is not allowed here : we can't follow ourself
+            long urlId = getIdUrl(req);
+            if (urlId == 0) throw new ApiException(400, "Url ID not found ", "Url Id not found");
 
             // parse the bool (true or false)
             boolean parameter = Boolean.parseBoolean(req.getParameter("followed"));
@@ -74,7 +74,6 @@ public class UserServlet extends JsonServlet {
         if(req.getParameter(ValidationUtils.PARAMETER_UPDATE_PWD) != null) {
             //Update passWord
             String password = req.getParameter(ValidationUtils.PARAMETER_UPDATE_PWD);
-
             if (!ValidationUtils.validatePassword(password)) {
                 throw new ApiException(400, "invalidPassword", "Password did not match the specs");
             }
@@ -83,20 +82,12 @@ public class UserServlet extends JsonServlet {
 
         // Manage email update --------------------------------------------------
         if(req.getParameter(ValidationUtils.PARAMETER_UPDATE_EMAIL) != null) {
-
             //Update email if User is authentificated
             String mail = req.getParameter(ValidationUtils.PARAMETER_UPDATE_EMAIL);
-
-            if (!ValidationUtils.validateEmail(mail)) {
-                throw new ApiException(400, "invalidEmail", "Invalid email");
-            }
-            if (UsersRepository.getUserByEmail(mail) != null) {
-                throw new ApiException(400, "duplicateEmail", "Duplicate email");
-            }
-
+            if (!ValidationUtils.validateEmail(mail)) throw new ApiException(400, "invalidEmail", "Invalid email");
+            if (UsersRepository.getUserByEmail(mail) != null) throw new ApiException(400, "duplicateEmail", "Duplicate email");
             userAuth.email = mail;
         }
-
         UsersRepository.saveUser(userAuth);
         return userAuth;
     }
@@ -108,92 +99,26 @@ public class UserServlet extends JsonServlet {
     // Return the user information to confirm.
     @Override
     protected User doDelete(HttpServletRequest req) throws ServletException, IOException, ApiException {
-        // TODO: Security checks
-        // TODO: Delete the user, the messages, the relationships
+        // DONE: Security checks
+        // DONE: Delete the user, the messages, the relationships
         // A DELETE request shall not have a response body
-        User authUser = findUserOfRequest(req);
-        //To be sure that the user return is Auth and not the url-id
-        if (!authUser.password.isEmpty()) {
+        User authUser = getAuthenticatedUser(req);
+        if (authUser == null ) throw new ApiException(500, "User Not found", "User Not found");
 
-            // For instance we can just iterate on a whole Repository Message list
-            // to delete all messages of the user.
-            // We could create a list of Reference of all Messages in the User
-            // model to simplify the edition
-            List<Message> messages = MessagesRepository.getMessages();
-            for (Message message : messages) {
+        // For instance we can just iterate on a whole Repository Message list
+        // to delete all messages of the user.
+        // We could create a list of Reference of all Messages in the User
+        // model to simplify the edition
+        List<Message> messages = MessagesRepository.getMessages();
+        for (Message message : messages) {
             User matchedUser = message.user.get();
-                if (matchedUser.id == authUser.id) {
-                    MessagesRepository.deleteMessage(authUser.id);
-                }
-            }
-            // user deleted once all messages have been deleted.
-            UsersRepository.deleteUser(authUser.id);
-        }
-        return authUser;
-
-    }
-
-    // Identification method of a user //
-    // Return the full user if Authentification is validated AND matched with the id on the url (users/id/...)
-    // If id of the url is substituated by "me", Authentification succed : Returr also Auth User
-    // For all other configuration : RETURN the user with hide personal information
-    private static User findUserOfRequest(HttpServletRequest req) throws ApiException {
-
-        // TODO: Extract the id of the user from the last part of the path of the request
-        // TODO: Check if this id is syntactically correct
-        // TODO: Not found?
-        String path = req.getPathInfo();
-        String[] parts = path.split("/");
-
-        User user = getAuthenticatedUser(req);
-        if (user == null) {
-            // return the user of the id specified with hide private info
-            if (ValidationUtils.validateIdString(parts[1])) {
-                long id = Long.parseLong(parts[1]);
-                user = UsersRepository.getUser(id);
-                user.email = "";
-                user.password = "";
-                return user;
-            }
-            // Id not found
-            return null;
-        } else {
-        // if authentification succeed
-            // if id ="me" => return the auth user
-            if (ValidationUtils.validateIdMe(parts[1])) {
-                return user;
-            }
-            // check id and parse it
-            if (ValidationUtils.validateIdString(parts[1])) {
-                long id = Long.parseLong(parts[1]);
-                // user wants edit its own account if the id of the url and id of the authentificated user is the same.
-                if (UsersRepository.getUser(id).id == user.id) {
-                    return user;
-                }
-                // return the user of the id specified with hide private info
-                user = UsersRepository.getUser(id);
-                user.email = "";
-                user.password = "";
-                return user;
+            if (matchedUser.id == authUser.id) {
+                MessagesRepository.deleteMessage(authUser.id);
             }
         }
+        // user deleted once all messages have been deleted.
+        UsersRepository.deleteUser(authUser.id);
+        // return null if delete action succeed
         return null;
     }
 }
-
-/*if(req.getParameter("newAvatar") != null ){
-
-            BlobstoreService blobstoreService = BlobstoreServiceFactory.getBlobstoreService();
-
-            Map<String, List<BlobKey>> blobs = blobstoreService.getUploads(req);
-            List<BlobKey> blobKeys = blobs.get("myFile");
-
-            if (blobKeys == null || blobKeys.isEmpty()) {
-                res.sendRedirect("/");
-            } else {
-                res.sendRedirect("/serve?blob-key=" + blobKeys.get(0).getKeyString());
-            }
-
-            String urlImage =
-        }
-        */

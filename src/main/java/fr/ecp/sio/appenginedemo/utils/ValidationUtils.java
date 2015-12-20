@@ -36,7 +36,7 @@ public class ValidationUtils {
 
     public static boolean validateMessage(String message) {
         // Here we use a library from Apache Commons to do the validation
-        return message != null && message.length() < 400;
+        return message != null && message.length() > 10 && message.length() < 400;
     }
 
     public static boolean validateIdString(String idString) {
@@ -44,7 +44,7 @@ public class ValidationUtils {
     }
 
     public static boolean validateIdMe(String idMe) {
-        return idMe.matches(ID_ME);
+        return idMe != null && idMe.matches(ID_ME);
     }
 
 }
