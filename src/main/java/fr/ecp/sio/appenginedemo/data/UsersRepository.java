@@ -105,7 +105,7 @@ public class UsersRepository {
         public final List<User> users;
         public final String cursor;
 
-        private UsersList(List<User> users, String cursor) {
+        public UsersList(List<User> users, String cursor) {
             this.users = users;
             this.cursor = cursor;
         }

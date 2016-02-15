@@ -34,8 +34,10 @@ public class MessagesRepository {
         List<Message> allMessages = getMessages();
         List<Message> returnMessages = new ArrayList<> ();
         for (Message m : allMessages) {
-            if(m.user.get().id == userId) {
-                returnMessages.add(m);
+            if (m.user.get() != null ) {
+                if (m.user.get().id == userId) {
+                    returnMessages.add(m);
+                }
             }
         }
         return returnMessages;

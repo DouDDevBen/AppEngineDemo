@@ -44,7 +44,9 @@ public class MessagesServlet extends JsonServlet {
         List<User> userList = UsersRepository.getUserFollowed(userAuth.id, 100).users;
         List<Message> messageList = new ArrayList<> ();
         for (User user : userList) {
-            messageList.addAll(MessagesRepository.getMessagesForId(user.id));
+            if(user != null) {
+                messageList.addAll(MessagesRepository.getMessagesForId(user.id));
+            }
         }
         return hideInfoForListMessage(messageList);
     }
@@ -71,10 +73,14 @@ public class MessagesServlet extends JsonServlet {
         message.user = Ref.create(getAuthenticatedUser(req));
         message.date = new Date();
         message.id = null;
+        message.user.get().password = "";
+        message.user.get().email = "";
+
 
         // Our message is now ready to be persisted into our repository
         // After this call, our repository should have given it a non-null id
         MessagesRepository.insertMessage(message);
+
 
         return message;
     }

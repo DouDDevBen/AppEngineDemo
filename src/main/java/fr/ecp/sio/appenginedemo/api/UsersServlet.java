@@ -35,7 +35,7 @@ public class UsersServlet extends JsonServlet {
         String followerOf = req.getParameter(ValidationUtils.PARAMETER_FOLLOWEROF);
 
         // By default
-        if (followedBy == null || followerOf == null) {
+        if (followedBy == null && followerOf == null) {
             List<User> usersList = UsersRepository.getUsers().users;
             return hideInfoForListUser(usersList);
         }
@@ -85,7 +85,8 @@ public class UsersServlet extends JsonServlet {
     // RETURN : List of (Cursor + List of Users)
     protected Object handleRequiereList(String type, String token, User user, int limit ) {
 
-        List<Object> maList = new ArrayList<>();
+        //List<Object> maList = new ArrayList<>();
+
         List<User> usersList;
         if (token == "") {
             token = TokenUtils.generateToken(user.id);
@@ -105,10 +106,15 @@ public class UsersServlet extends JsonServlet {
         }
         // Return a list working with the first element : Cursor token for further GET
         // and a second element with the whole UserList found.
-        maList.add(token);
+        //maList.add(token);
         // hide private info
-        maList.add(hideInfoForListUser(usersList));
-        return maList;
+        //maList.add(hideInfoForListUser(usersList));
+        //return maList;
+
+        UsersRepository.UsersList usersAndCursorList  = new UsersRepository.UsersList(usersList, token);
+        return  usersAndCursorList;
+
+
     }
 
     // A POST request can be used to create a user
